@@ -20,6 +20,7 @@ type Group struct {
 	name      string
 	getter    Getter
 	mainCache cache
+	peers     PeerPicker
 }
 
 var (
@@ -61,6 +62,14 @@ func (g *Group) Get(key string) (ByteView, error) {
 }
 
 func (g *Group) load(key string) (value ByteView, err error) {
+	if g.peers != nil {
+		if peer, ok := g.peers.PickPeer(key); ok {
+			if value, err := g.getFromPeer(peer, key); err == nil {
+				return value, nil
+			}
+			log.Println("[EnamoreCache] Failed to get from peer", err)
+		}
+	}
 	return g.getLocally(key)
 }
 
@@ -76,4 +85,19 @@ func (g *Group) getLocally(key string) (ByteView, error) {
 
 func (g *Group) populateCache(key string, value ByteView) {
 	g.mainCache.add(key, value)
+}
+
+func (g *Group) RegisterPeers(peers PeerPicker) {
+	if g.peers != nil {
+		panic("RegisterPeerPicker called more than once")
+	}
+	g.peers = peers
+}
+
+func (g *Group) getFromPeer(peer PeerGetter, key string) (ByteView, error) {
+	bytes, err := peer.Get(g.name, key)
+	if err != nil {
+		return ByteView{}, err
+	}
+	return ByteView{b: bytes}, nil
 }
