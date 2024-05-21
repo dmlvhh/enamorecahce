@@ -1,7 +1,9 @@
 package enamorecache
 
+import pb "github.com/dmlvhh/enamorecahce/enamorecahcepb"
+
 type PeerGetter interface {
-	Get(group string, key string) ([]byte, error)
+	Get(in *pb.Request, out *pb.Response) error
 }
 
 type PeerPicker interface {
